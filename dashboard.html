@@ -1,0 +1,599 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>OSED War Room</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --bg:#eef0f4; --surface:#ffffff; --surface-2:#e7eaf0; --border:#d3d8e2;
+  --text:#171a21; --muted:#59607220; --muted-fg:#5a6172;
+  --accent:#b4530a; --accent-soft:#b4530a1a;
+  --accent-2:#0f766e; --accent-2-soft:#0f766e1a;
+  --good:#1f8a4c; --warn:#b7791f; --crit:#c0392b;
+  --shadow:0 1px 2px rgba(16,20,30,.06),0 8px 24px rgba(16,20,30,.06);
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:'IBM Plex Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  color-scheme: dark;
+  --bg:#0e1117; --surface:#161b24; --surface-2:#1d2431; --border:#2a3140;
+  --text:#e6e9ef; --muted:#8a93a622; --muted-fg:#8a93a6;
+  --accent:#ffb454; --accent-soft:#ffb4541f;
+  --accent-2:#4fd6c0; --accent-2-soft:#4fd6c01f;
+  --good:#5bd18a; --warn:#ffcc66; --crit:#ff6b6b;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35);
+}}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#0e1117; --surface:#161b24; --surface-2:#1d2431; --border:#2a3140;
+  --text:#e6e9ef; --muted:#8a93a622; --muted-fg:#8a93a6;
+  --accent:#ffb454; --accent-soft:#ffb4541f;
+  --accent-2:#4fd6c0; --accent-2-soft:#4fd6c01f;
+  --good:#5bd18a; --warn:#ffcc66; --crit:#ff6b6b;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:var(--sans); font-size:15px; line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:940px; margin:0 auto; padding-block:0 64px; padding-inline:16px}
+code,kbd,.mono{font-family:var(--mono)}
+
+/* header */
+header.app{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:20;
+  background:color-mix(in srgb,var(--bg) 88%,transparent);
+  backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--border);
+  margin-inline:-16px; padding:14px 16px 0;
+}
+.head-row{display:flex; align-items:center; gap:12px; max-width:940px; margin:0 auto}
+.brand{display:flex; align-items:baseline; gap:10px; flex:1; min-width:0}
+.brand .dot{width:9px;height:9px;border-radius:50%;background:var(--accent);
+  box-shadow:0 0 0 4px var(--accent-soft); flex:none; align-self:center}
+.brand h1{font-size:1.02rem; font-weight:700; letter-spacing:.2px; margin:0; white-space:nowrap}
+.brand .sub{font-family:var(--mono); font-size:.72rem; color:var(--muted-fg);
+  text-transform:uppercase; letter-spacing:1px; white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis}
+.tbtn{font:inherit; font-size:.8rem; cursor:pointer; color:var(--muted-fg);
+  background:var(--surface); border:1px solid var(--border); border-radius:8px;
+  padding:6px 10px; display:flex; align-items:center; gap:6px}
+.tbtn:hover{color:var(--text)}
+nav.tabs{display:flex; gap:2px; max-width:940px; margin:12px auto 0; overflow-x:auto;
+  scrollbar-width:none}
+nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs button{
+  font:inherit; font-weight:600; font-size:.86rem; cursor:pointer; white-space:nowrap;
+  background:transparent; border:0; color:var(--muted-fg);
+  padding:9px 13px 12px; border-bottom:2px solid transparent; margin-bottom:-1px}
+nav.tabs button[aria-selected="true"]{color:var(--text); border-bottom-color:var(--accent)}
+nav.tabs button:hover{color:var(--text)}
+
+section{margin-top:22px}
+.panel{background:var(--surface); border:1px solid var(--border); border-radius:14px;
+  padding:18px; box-shadow:var(--shadow)}
+h2.sec{font-size:1.15rem; margin:0 0 4px; text-wrap:balance}
+.lede{color:var(--muted-fg); margin:0 0 16px; font-size:.92rem}
+.eyebrow{font-family:var(--mono); font-size:.7rem; letter-spacing:1.5px;
+  text-transform:uppercase; color:var(--accent); margin:0 0 6px}
+
+/* 8-step loop */
+.loop{display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:10px}
+.step{background:var(--surface-2); border:1px solid var(--border); border-radius:11px;
+  padding:12px 13px; display:flex; gap:11px; align-items:flex-start}
+.step .n{font-family:var(--mono); font-weight:600; font-size:.78rem; color:var(--bg);
+  background:var(--accent); width:22px;height:22px;border-radius:6px; flex:none;
+  display:grid; place-items:center; margin-top:1px}
+.step h3{margin:0 0 2px; font-size:.9rem}
+.step p{margin:0; font-size:.8rem; color:var(--muted-fg); line-height:1.4}
+.step code{font-size:.76rem; color:var(--accent-2); background:var(--accent-2-soft);
+  padding:1px 5px; border-radius:4px}
+
+/* triage */
+.tree{display:flex; flex-direction:column; gap:10px}
+.branch{border:1px solid var(--border); border-radius:12px; overflow:hidden;
+  background:var(--surface-2)}
+.branch>summary{cursor:pointer; padding:13px 15px; font-weight:600; list-style:none;
+  display:flex; align-items:center; gap:10px}
+.branch>summary::-webkit-details-marker{display:none}
+.branch>summary .sig{font-family:var(--mono); font-size:.72rem; color:var(--bg);
+  background:var(--accent-2); padding:2px 7px; border-radius:5px; flex:none}
+.branch>summary .chev{margin-left:auto; color:var(--muted-fg); transition:transform .2s}
+.branch[open]>summary .chev{transform:rotate(90deg)}
+.branch .body{padding:0 15px 14px; font-size:.88rem}
+.branch .body p{margin:8px 0}
+.branch .body .go{display:inline-block; font-family:var(--mono); font-size:.76rem;
+  color:var(--accent); text-decoration:none; border:1px dashed var(--accent);
+  padding:3px 8px; border-radius:6px; margin-top:4px}
+.triage-cmds{margin-top:16px}
+
+/* code blocks */
+pre{margin:0; background:var(--surface-2); border:1px solid var(--border);
+  border-radius:10px; padding:12px 14px; overflow-x:auto; font-family:var(--mono);
+  font-size:.8rem; line-height:1.6}
+pre .c{color:var(--muted-fg)}
+pre .k{color:var(--accent)}
+pre .s{color:var(--accent-2)}
+
+/* cheats search */
+.search{display:flex; gap:8px; margin-bottom:14px; position:sticky;
+  top:calc(env(safe-area-inset-top,0px) + 96px); z-index:5}
+.search input{flex:1; font:inherit; font-size:.9rem; padding:11px 13px; color:var(--text);
+  background:var(--surface); border:1px solid var(--border); border-radius:10px}
+.search input:focus{outline:2px solid var(--accent); outline-offset:1px; border-color:transparent}
+.cht{border:1px solid var(--border); border-radius:11px; overflow:hidden; margin-bottom:9px;
+  background:var(--surface)}
+.cht>.h{display:flex; align-items:center; gap:9px; padding:11px 14px; background:var(--surface-2)}
+.cht>.h .tag{font-family:var(--mono); font-size:.66rem; letter-spacing:.5px;
+  text-transform:uppercase; color:var(--accent-2); background:var(--accent-2-soft);
+  padding:2px 7px; border-radius:20px}
+.cht>.h h3{margin:0; font-size:.9rem}
+.cht table{width:100%; border-collapse:collapse; font-size:.82rem}
+.cht td{padding:9px 14px; border-top:1px solid var(--border); vertical-align:top}
+.cht td:first-child{font-family:var(--mono); color:var(--accent); white-space:nowrap;
+  width:44%; font-size:.78rem}
+.cht td:last-child{color:var(--muted-fg)}
+.nores{color:var(--muted-fg); text-align:center; padding:26px; font-size:.9rem}
+
+/* flashcards */
+.fc-bar{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px}
+.fc-bar .stat{font-family:var(--mono); font-size:.76rem; color:var(--muted-fg)}
+.fc-bar .stat b{color:var(--text)}
+.fc-bar .spacer{flex:1}
+.pill{font:inherit; font-size:.78rem; font-weight:600; cursor:pointer; border-radius:8px;
+  padding:7px 12px; border:1px solid var(--border); background:var(--surface); color:var(--text)}
+.pill:hover{border-color:var(--accent)}
+.progress{height:6px; border-radius:6px; background:var(--surface-2);
+  border:1px solid var(--border); overflow:hidden; margin-bottom:16px}
+.progress i{display:block; height:100%; background:var(--accent);
+  width:0%; transition:width .3s}
+.card{position:relative; border:1px solid var(--border); border-radius:16px;
+  background:var(--surface); box-shadow:var(--shadow); min-height:210px; cursor:pointer;
+  padding:26px 22px; display:flex; flex-direction:column; justify-content:center;
+  text-align:center}
+.card .side-label{position:absolute; top:12px; left:16px; font-family:var(--mono);
+  font-size:.66rem; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted-fg)}
+.card .cat{position:absolute; top:12px; right:16px; font-family:var(--mono);
+  font-size:.66rem; color:var(--accent-2)}
+.card .content{font-size:1.05rem; line-height:1.5}
+.card .content.answer{font-family:var(--mono); font-size:.92rem; color:var(--accent);
+  white-space:pre-wrap; text-align:left}
+.card .hint{position:absolute; bottom:12px; left:0; right:0; text-align:center;
+  font-size:.72rem; color:var(--muted-fg)}
+.fc-actions{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px}
+.fc-actions button{font:inherit; font-weight:600; font-size:.9rem; cursor:pointer;
+  padding:13px; border-radius:11px; border:1px solid var(--border); background:var(--surface)}
+.fc-actions .miss{color:var(--crit); border-color:color-mix(in srgb,var(--crit) 40%,var(--border))}
+.fc-actions .got{color:var(--good); border-color:color-mix(in srgb,var(--good) 40%,var(--border))}
+.fc-actions button:active{transform:translateY(1px)}
+.done-msg{text-align:center; padding:30px 10px}
+.done-msg .big{font-size:1.3rem; font-weight:700; margin-bottom:6px}
+.done-msg p{color:var(--muted-fg); margin:4px 0}
+
+/* playbooks */
+.pb{border:1px solid var(--border); border-radius:12px; margin-bottom:10px;
+  background:var(--surface); overflow:hidden}
+.pb>summary{cursor:pointer; padding:14px 16px; font-weight:600; list-style:none;
+  display:flex; align-items:center; gap:10px}
+.pb>summary::-webkit-details-marker{display:none}
+.pb>summary .chev{margin-left:auto; color:var(--muted-fg); transition:transform .2s}
+.pb[open]>summary .chev{transform:rotate(90deg)}
+.pb .body{padding:0 16px 16px}
+.pb .body ol{margin:6px 0; padding-left:20px}
+.pb .body li{margin:5px 0; font-size:.88rem}
+.pb .body li code{font-size:.78rem; color:var(--accent-2); background:var(--accent-2-soft);
+  padding:1px 5px; border-radius:4px}
+.pb .gotcha{margin-top:12px; padding:10px 12px; border-radius:9px; font-size:.82rem;
+  background:var(--accent-soft); border:1px solid color-mix(in srgb,var(--accent) 30%,transparent)}
+.pb .gotcha b{color:var(--accent)}
+
+footer{margin-top:34px; text-align:center; color:var(--muted-fg); font-size:.78rem;
+  font-family:var(--mono)}
+.hidden{display:none !important}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header class="app">
+  <div class="head-row">
+    <div class="brand">
+      <span class="dot"></span>
+      <h1>OSED War Room</h1>
+      <span class="sub" id="clock">windbg&nbsp;›&nbsp;ready</span>
+    </div>
+    <button class="tbtn" id="theme" aria-label="Toggle theme">◐ <span id="themetxt">Theme</span></button>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-tab="loop">The Loop</button>
+    <button role="tab" aria-selected="false" data-tab="triage">Triage</button>
+    <button role="tab" aria-selected="false" data-tab="cheats">Cheats</button>
+    <button role="tab" aria-selected="false" data-tab="cards">Flashcards</button>
+    <button role="tab" aria-selected="false" data-tab="playbooks">Playbooks</button>
+  </nav>
+</header>
+
+<div class="wrap">
+
+  <!-- LOOP -->
+  <section id="loop">
+    <p class="eyebrow">memorize this — it is every exploit</p>
+    <h2 class="sec">The Universal 8-Step Loop</h2>
+    <p class="lede">Lost mid-target? Stop and ask: <b>which step am I on?</b> Every
+      playbook is just this loop specialized for one bug class.</p>
+    <div class="loop" id="loopgrid"></div>
+  </section>
+
+  <!-- TRIAGE -->
+  <section id="triage" class="hidden">
+    <p class="eyebrow">i have a crash — now what</p>
+    <h2 class="sec">Crash Triage Decision Tree</h2>
+    <p class="lede">Run the four commands, read the signals, tap the branch that matches.</p>
+    <div class="panel triage-cmds">
+      <p class="eyebrow" style="color:var(--accent-2)">paste these first, every time</p>
+      <pre><span class="k">r</span>                      <span class="c">; registers — is EIP = 41414141?</span>
+<span class="k">!exchain</span>               <span class="c">; SEH chain — is the handler your bytes?</span>
+<span class="k">!py mona findmsp</span>       <span class="c">; maps every reg/ptr to your pattern at once</span>
+<span class="k">!py mona mod</span>           <span class="c">; ASLR / DEP / SafeSEH / Rebase table</span></pre>
+    </div>
+    <div class="tree" id="treebox" style="margin-top:16px"></div>
+  </section>
+
+  <!-- CHEATS -->
+  <section id="cheats" class="hidden">
+    <p class="eyebrow">the commands, searchable</p>
+    <h2 class="sec">Command Lookup</h2>
+    <p class="lede">Type a tool, a register, an opcode — filters live.</p>
+    <div class="search">
+      <input id="cheatsearch" type="search" placeholder="jmp esp · mona rop · virtualprotect · %n …" autocomplete="off">
+    </div>
+    <div id="cheatbox"></div>
+    <div class="nores hidden" id="nores">No match. Try “mona”, “eip”, “seh”, “dep”.</div>
+  </section>
+
+  <!-- CARDS -->
+  <section id="cards" class="hidden">
+    <p class="eyebrow">active recall beats re-reading</p>
+    <h2 class="sec">Flashcards</h2>
+    <p class="lede">Tap to flip. Be honest — “Missed” recycles it into this round.</p>
+    <div class="fc-bar">
+      <span class="stat">Round <b id="fc-pos">0</b>/<b id="fc-total">0</b></span>
+      <span class="stat">Known <b id="fc-known">0</b></span>
+      <span class="spacer"></span>
+      <button class="pill" id="fc-shuffle">↻ Shuffle</button>
+      <button class="pill" id="fc-reset">Reset progress</button>
+    </div>
+    <div class="progress"><i id="fc-progress"></i></div>
+    <div id="fc-stage">
+      <div class="card" id="fc-card">
+        <span class="side-label" id="fc-face">Prompt</span>
+        <span class="cat" id="fc-cat"></span>
+        <div class="content" id="fc-text">Loading…</div>
+        <span class="hint">tap to flip</span>
+      </div>
+      <div class="fc-actions">
+        <button class="miss" id="fc-miss">Missed ✗</button>
+        <button class="got" id="fc-got">Knew it ✓</button>
+      </div>
+    </div>
+    <div class="done-msg hidden" id="fc-done">
+      <div class="big">Round clear. 🎯</div>
+      <p id="fc-done-sub"></p>
+      <button class="pill" id="fc-again" style="margin-top:10px">Go again</button>
+    </div>
+  </section>
+
+  <!-- PLAYBOOKS -->
+  <section id="playbooks" class="hidden">
+    <p class="eyebrow">the specialized loops</p>
+    <h2 class="sec">Playbooks</h2>
+    <p class="lede">The condensed version. The full text lives in <code>00-methodology/</code>.</p>
+    <div id="pbbox"></div>
+  </section>
+
+  <footer>keep it offline · keep it in your lab VM · make it yours</footer>
+</div>
+
+<script>
+/* ---------- data ---------- */
+const LOOP=[
+ ["Fuzz / crash","Grow the buffer until it dies. Confirm you control the crash."],
+ ["Find offset","<code>pattern_create</code> / <code>mona findmsp</code> → distance to EIP or SEH."],
+ ["Control pointer","Overwrite EIP / nSEH+SEH / a saved return. Verify with BBBB."],
+ ["Find badchars","Send \\x01..\\xff, <code>mona compare</code> until clean."],
+ ["Find a jump","<code>mona jmp</code> / <code>seh</code> / <code>rop</code> — clean address, right module."],
+ ["Get space + stage","Egghunter? Jump back? Direct shellcode?"],
+ ["Defeat mitigations","DEP → ROP. ASLR → leak / non-ASLR module."],
+ ["Land shellcode","Align, decode if encoded, pop the shell."]
+];
+
+const TREE=[
+ {sig:"EIP = 41414141",q:"EIP holds your cyclic/AAAA bytes",
+  a:"Classic <b>stack buffer overflow</b> — you own the saved return address directly. Get the offset, drop a JMP ESP, land shellcode after it.",go:"stack-bof-playbook.md"},
+ {sig:"!exchain = yours",q:"EIP intact, but the SEH handler is your bytes",
+  a:"<b>SEH overflow</b>. Put a POP POP RET (SafeSEH-off module) in SEH and a short jump <code>EB 06</code> in nSEH to hop over it into shellcode.",go:"seh-playbook.md"},
+ {sig:"tiny space",q:"You control the pointer but have <~80 bytes",
+  a:"<b>Egghunter</b>. Plant a ~32-byte hunter at the pointer; spray <code>w00tw00t</code> + real shellcode into a roomier buffer elsewhere.",go:"egghunter-playbook.md"},
+ {sig:"DEP / NX on",q:"You land in your bytes but they won't execute",
+  a:"<b>DEP bypass</b> with ROP. <code>mona rop -m *.dll -cpb</code> builds a VirtualProtect chain to mark memory RWX, then returns into shellcode.",go:"dep-rop-playbook.md"},
+ {sig:"addr drifts",q:"Works once, breaks after reboot; modules rebase",
+  a:"<b>ASLR</b>. First hunt a non-ASLR module (<code>mona mod</code>). Else leak a pointer and compute base = leaked − RVA.",go:"aslr-bypass-playbook.md"},
+ {sig:"printf(you)",q:"App uses your string as the format argument",
+  a:"<b>Format string</b>. <code>%N$x</code> to leak (beat ASLR), <code>%hhn</code> to write a return address / func pointer byte-by-byte.",go:"format-string-playbook.md"}
+];
+
+const CHEATS=[
+ {tag:"WinDbg",title:"Triage & flow",rows:[
+  ["r","all registers — is EIP your bytes?"],
+  ["!exchain","show the SEH chain"],
+  ["g / gN","go / pass exception to handler (SEH crashes)"],
+  ["t / p","step into / step over one instruction"],
+  ["u eip","disassemble at EIP"],
+  ["dd esp L40","dump 0x40 dwords from ESP (landing zone)"],
+  ["dds esp","dump stack + symbols (great for ROP)"],
+  ["bp <addr>","breakpoint; bp kernel32!VirtualProtect"],
+  ["ba w4 <addr>","break on 4-byte WRITE (who clobbers SEH?)"],
+  ["s -a <s> L?80000000 \"w00tw00t\"","find your egg in memory"],
+  ["lm / !address <a>","modules / what region is this"]
+ ]},
+ {tag:"mona",title:"The workhorse",rows:[
+  ["!py mona findmsp","the all-in-one crash triage"],
+  ["!py mona mod","ASLR/DEP/SafeSEH/Rebase table"],
+  ["!py mona bytearray -b \"\\x00\"","generate badchar test array"],
+  ["!py mona compare -f <bin> -a <addr>","diff memory vs array → badchars"],
+  ["!py mona jmp -r esp -cpb \"...\"","find JMP ESP, badchar-clean"],
+  ["!py mona seh -cpb \"...\"","find POP POP RET (SafeSEH-off)"],
+  ["!py mona rop -m *.dll -cpb \"...\"","build ROP chain for DEP bypass"],
+  ["!py mona egg -t w00t","generate an egghunter"],
+  ["-cm aslr=false","criteria flag: non-ASLR modules only"],
+  ["!py mona ropfunc -m <mod>","resolve VirtualProtect/Alloc pointers"]
+ ]},
+ {tag:"opcodes",title:"Bytes to know cold",rows:[
+  ["FF E4","jmp esp"],["FF D4","call esp"],["54 C3","push esp; ret (pivot)"],
+  ["58 C3","pop eax; ret"],["5F 5E C3","pop pop ret (SEH gadget)"],
+  ["C3","ret"],["90","nop"],["CC","int3 (breakpoint)"],
+  ["EB 06","short jmp +6 (nSEH over SEH)"],["E9 <rel32>","near jmp ±2GB"],
+  ["31 C0","xor eax,eax (zero, no null)"],["B0 05","mov al,5 (small load, no null)"]
+ ]},
+ {tag:"msfvenom",title:"Shellcode gen",rows:[
+  ["-p windows/shell_reverse_tcp","reverse shell payload"],
+  ["LHOST=IP LPORT=443","your listener"],
+  ["-b \"\\x00\\x0a\\x0d\"","exclude bad chars (always)"],
+  ["-f python -v shellcode","output format + var name"],
+  ["-e x86/shikata_ga_nai -i 3","encode to dodge badchars"],
+  ["EXITFUNC=thread","exit clean, keep service alive"],
+  ["windows/exec CMD=calc.exe","PoC: prove code exec"],
+  ["nc -lvnp 443","catch the reverse shell"]
+ ]},
+ {tag:"format str",title:"printf primitives",rows:[
+  ["%N$x  /  %N$p","read the Nth stack arg directly"],
+  ["AAAA %x %x …","find your offset (look for 41414141)"],
+  ["%N$s","deref arg N as char* and print (leak)"],
+  ["%n","write bytes-printed-so-far to *arg"],
+  ["%hhn / %hn","write 1 byte / 2 bytes"],
+  ["%<w>c then %hhn","pad count to target byte, then write"]
+ ]},
+ {tag:"asm/PEB",title:"Shellcode internals",rows:[
+  ["fs:[0x30]","→ PEB"],["PEB+0x0C","→ Ldr"],
+  ["Ldr+0x14","→ InMemoryOrderModuleList"],["fs:[0x00]","→ SEH chain head"],
+  ["xor eax,eax; push eax","push 0 without a null"],
+  ["stdcall","args right→left, callee cleans (retn N), ret in EAX"],
+  ["struct.pack('<I',a)","pack pointers little-endian"],
+  ["VirtualProtect flNewProtect","0x40 = PAGE_EXECUTE_READWRITE"]
+ ]}
+];
+
+const PLAYBOOKS=[
+ {name:"Stack Buffer Overflow",sig:"EIP = 41414141",steps:[
+  "Fuzz to the crashing length; attach WinDbg before sending.",
+  "Cyclic pattern → <code>mona findmsp</code> for the offset to EIP.",
+  "Confirm: <code>A*offset + BBBB + C…</code> puts 42424242 in EIP.",
+  "Badchar ritual: bytearray → compare → repeat until unmodified.",
+  "<code>mona jmp -r esp -cpb</code> → JMP ESP in a non-ASLR module.",
+  "<code>A*offset + p32(JMP_ESP) + NOPs + shellcode</code>, pad to crash length."
+ ],gotcha:"Encoded shellcode decodes onto the stack below ESP — add NOPs / <code>sub esp</code> or it corrupts itself."},
+ {name:"SEH Overflow",sig:"handler = yours",steps:[
+  "Pass the exception (<code>g</code>) so the SEH chain populates.",
+  "<code>mona findmsp</code> → offset to nSEH (SEH is +4).",
+  "<code>mona seh -cpb</code> → POP POP RET in a SafeSEH-off module.",
+  "nSEH = <code>\\xeb\\x06\\x90\\x90</code> (short jmp over the SEH pointer).",
+  "Layout: <code>A*off + nSEH + p32(PPR) + shellcode</code>."
+ ],gotcha:"POP POP RET module must be SafeSEH-off AND non-ASLR. App/3rd-party DLLs are gold."},
+ {name:"Egghunter",sig:"tiny space",steps:[
+  "<code>mona egg -t w00t</code> → ~32-byte hunter (badchar-check it!).",
+  "Tag real shellcode: <code>w00tw00t + shellcode</code> (tag doubled).",
+  "Place the hunter at your controlled pointer (EIP or via SEH).",
+  "Deliver the tagged shellcode into any roomy field/buffer.",
+  "Hunter scans memory, finds the egg, jumps to the byte after."
+ ],gotcha:"The tag is searched DOUBLED so it won't match the hunter's own code. Egg bytes must dodge badchars."},
+ {name:"DEP Bypass (ROP)",sig:"NXCompat = True",steps:[
+  "<code>mona rop -m *.dll -cpb</code> → rop_chains.txt (ready Python).",
+  "Prefer the VirtualProtect chain; check for missing gadgets.",
+  "Gadgets must come from non-ASLR / non-rebase modules.",
+  "Chain sets args, calls VirtualProtect(addr,size,0x40,old), returns into shellcode.",
+  "Single-step (<code>t</code>) if it dies to find the broken gadget."
+ ],gotcha:"A single badchar in a gadget address silently kills the chain. Always pass -cpb."},
+ {name:"ASLR Bypass",sig:"addresses drift",steps:[
+  "First: <code>mona mod</code> — any module with ASLR=False? Use its fixed addresses.",
+  "<code>mona jmp -r esp -cm aslr=false -cpb</code> restricts to those.",
+  "No luck? Find an info leak (format string %p, over-read, echoed pointer).",
+  "Identify the leaked symbol; RVA is constant under ASLR.",
+  "base = leaked − RVA; rebuild every address as base + RVA at runtime."
+ ],gotcha:"Leak in the SAME process run you exploit — the base changes each launch."},
+ {name:"Format String",sig:"printf(you)",steps:[
+  "Send <code>AAAA %x %x…</code>; the %x printing 41414141 is your offset N.",
+  "Leak: <code>%N$p</code> to read stack, or <code>&lt;addr&gt;%N$s</code> to deref.",
+  "Write: point args at addr+0..3, use <code>%hhn</code> per byte.",
+  "Pad with <code>%&lt;width&gt;c</code>; order writes by ascending byte value.",
+  "Targets: saved return, a GOT/IAT func ptr, or the SEH."
+ ],gotcha:"Some CRTs disable %n. If it no-ops you may be limited to reads — still enough to beat ASLR."}
+];
+
+/* ---------- render ---------- */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+
+$("#loopgrid").innerHTML=LOOP.map((s,i)=>
+ `<div class="step"><span class="n">${i+1}</span><div><h3>${s[0]}</h3><p>${s[1]}</p></div></div>`).join("");
+
+$("#treebox").innerHTML=TREE.map(t=>
+ `<details class="branch"><summary><span class="sig">${t.sig}</span>${t.q}<span class="chev">›</span></summary>
+  <div class="body"><p>${t.a}</p><span class="go">→ ${t.go}</span></div></details>`).join("");
+
+function renderCheats(q=""){
+ q=q.trim().toLowerCase();
+ let any=false;
+ $("#cheatbox").innerHTML=CHEATS.map(c=>{
+   const rows=c.rows.filter(r=>!q||(r[0]+" "+r[1]+" "+c.tag+" "+c.title).toLowerCase().includes(q));
+   if(!rows.length) return "";
+   any=true;
+   return `<div class="cht"><div class="h"><span class="tag">${c.tag}</span><h3>${c.title}</h3></div>
+    <table><tbody>${rows.map(r=>`<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join("")}</tbody></table></div>`;
+ }).join("");
+ $("#nores").classList.toggle("hidden",any);
+}
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+$("#pbbox").innerHTML=PLAYBOOKS.map(p=>
+ `<details class="pb"><summary>${p.name}<span class="chev">›</span></summary>
+  <div class="body"><ol>${p.steps.map(s=>`<li>${s}</li>`).join("")}</ol>
+  <div class="gotcha"><b>Gotcha —</b> ${p.gotcha}</div></div></details>`).join("");
+
+/* ---------- tabs ---------- */
+const SECS=["loop","triage","cheats","cards","playbooks"];
+function show(tab){
+ SECS.forEach(s=>$("#"+s).classList.toggle("hidden",s!==tab));
+ $$("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===tab));
+ if(tab==="cards") drawCard();
+ try{location.hash=tab;}catch(e){}
+ window.scrollTo({top:0});
+}
+$$("nav.tabs button").forEach(b=>b.onclick=()=>show(b.dataset.tab));
+
+/* ---------- flashcards ---------- */
+const CARDS=[
+ ["First 4 WinDbg commands after any crash","r | !exchain | !py mona findmsp | !py mona mod","triage"],
+ ["Opcode for JMP ESP","FF E4","opcode"],
+ ["Opcode for a short jump +6 (nSEH trick)","EB 06","opcode"],
+ ["Opcode bytes for one POP POP RET","5F 5E C3  (pop edi; pop esi; ret)","opcode"],
+ ["Store 0x625011af in the buffer?","Little-endian: \\xaf\\x11\\x50\\x62\nstruct.pack('<I',0x625011af)","asm"],
+ ["Which register do you JMP to in a stack BOF?","ESP — it points at your landing zone right after EIP","concept"],
+ ["mona: find JMP ESP avoiding badchars","!py mona jmp -r esp -cpb \"\\x00\\x0a\\x0d\"","mona"],
+ ["mona: find POP POP RET for SEH","!py mona seh -cpb \"\\x00\\x0a\\x0d\"","mona"],
+ ["mona: build a ROP chain for DEP","!py mona rop -m *.dll -cpb \"\\x00\\x0a\\x0d\"","mona"],
+ ["mona: generate an egghunter (tag w00t)","!py mona egg -t w00t","mona"],
+ ["mona: the all-in-one crash triage","!py mona findmsp","mona"],
+ ["mona flag: non-ASLR modules only","-cm aslr=false","mona"],
+ ["Egg tag actually searched for, if tag = w00t","w00tw00t (the tag repeated twice)","concept"],
+ ["Typical egghunter size","~32 bytes","concept"],
+ ["What goes in nSEH?","A short jump (EB 06) over the SEH pointer into shellcode","seh"],
+ ["What goes in SEH?","Address of a POP POP RET gadget (little-endian)","seh"],
+ ["Why POP POP RET for SEH?","Unwinds 2 stack slots and RETs into nSEH, which you control","seh"],
+ ["Which mitigation must be OFF for the POP POP RET module?","SafeSEH (and ideally ASLR/Rebase too)","seh"],
+ ["DEP bypass, in one line","ROP chain → VirtualProtect/VirtualAlloc marks memory RWX, return into shellcode","dep"],
+ ["VirtualProtect flNewProtect for RWX","0x40 (PAGE_EXECUTE_READWRITE)","dep"],
+ ["Two ASLR bypass strategies","1) Use a non-ASLR module's fixed addrs  2) Leak a pointer, base = leaked − RVA","aslr"],
+ ["Why does RVA beat ASLR?","RVA = addr − base is constant; only the base randomizes","aslr"],
+ ["Format string: leak the Nth stack arg","%N$x  or  %N$p  (direct parameter access)","fmt"],
+ ["Format string: what does %n do?","Writes the count of bytes printed so far into the address at that arg","fmt"],
+ ["Format string: write one byte at a time","%hhn (1 byte); pad count with %<width>c, ascending byte order","fmt"],
+ ["Reach the PEB in x86 shellcode","mov eax, [fs:0x30]","asm"],
+ ["Zero a register without a null byte","xor eax, eax","asm"],
+ ["Push 0 without a null byte","xor eax,eax ; push eax","asm"],
+ ["3 almost-always bad characters","\\x00 (null), \\x0a (LF), \\x0d (CR)","badchar"],
+ ["Why encoded shellcode sometimes self-corrupts","Decoder writes near itself; needs stack room — add NOPs / sub esp","badchar"],
+ ["msfvenom flag to exclude badchars","-b \"\\x00\\x0a\\x0d\"","msf"],
+ ["msfvenom EXITFUNC that keeps the service alive","EXITFUNC=thread","msf"],
+ ["Catch a plain reverse shell","nc -lvnp <port>","msf"],
+ ["The universal 8-step loop","Fuzz · Offset · Control · Badchars · Find jump · Space/stage · Defeat mitigations · Land shellcode","concept"],
+ ["Pass a first-chance exception so SEH fires","g  (let it reach the handler)","triage"],
+ ["stdcall arg order & cleanup","Args right→left; callee cleans (retn N); return in EAX","asm"],
+ ["Best module type for gadgets/jumps","App's own / 3rd-party DLL (OS Dll=False) — usually no mitigations","concept"],
+ ["Exploit works attached but not standalone — first suspect?","A missed badchar truncated the payload, or addr differs when not attached","badchar"],
+ ["The one rule that saves exam runs","Prove code exec with int3/calc BEFORE fighting a full reverse shell","exam"]
+];
+
+const LS="osed_wr_known_v1";
+let known=loadKnown(), order=[], idx=0, flipped=false, queue=[];
+function loadKnown(){try{return new Set(JSON.parse(localStorage.getItem(LS)||"[]"));}catch(e){return new Set();}}
+function saveKnown(){try{localStorage.setItem(LS,JSON.stringify([...known]));}catch(e){}}
+
+function startRound(shuffle){
+ queue=CARDS.map((c,i)=>i).filter(i=>!known.has(cardKey(i)));
+ if(!queue.length) queue=CARDS.map((c,i)=>i); // all known → review everything
+ if(shuffle) for(let i=queue.length-1;i>0;i--){const j=(Math.random()*(i+1))|0;[queue[i],queue[j]]=[queue[j],queue[i]];}
+ idx=0; flipped=false;
+ $("#fc-done").classList.add("hidden"); $("#fc-stage").classList.remove("hidden");
+ drawCard();
+}
+function cardKey(i){return CARDS[i][0];}
+function drawCard(){
+ $("#fc-total").textContent=queue.length;
+ $("#fc-known").textContent=known.size;
+ if(idx>=queue.length){finishRound();return;}
+ $("#fc-pos").textContent=idx+1;
+ const c=CARDS[queue[idx]];
+ flipped=false;
+ $("#fc-face").textContent="Prompt";
+ $("#fc-cat").textContent=c[2];
+ const t=$("#fc-text"); t.className="content"; t.textContent=c[0];
+ $("#fc-progress").style.width=(queue.length?(idx/queue.length*100):0)+"%";
+}
+function flip(){
+ const c=CARDS[queue[idx]]; if(idx>=queue.length) return;
+ flipped=!flipped;
+ const t=$("#fc-text");
+ if(flipped){$("#fc-face").textContent="Answer"; t.className="content answer"; t.textContent=c[1];}
+ else{$("#fc-face").textContent="Prompt"; t.className="content"; t.textContent=c[0];}
+}
+function mark(good){
+ if(idx>=queue.length) return;
+ const key=cardKey(queue[idx]);
+ if(good){known.add(key); saveKnown();}
+ else{known.delete(key); saveKnown(); queue.push(queue[idx]);} // recycle missed
+ idx++; drawCard();
+}
+function finishRound(){
+ $("#fc-stage").classList.add("hidden");
+ $("#fc-done").classList.remove("hidden");
+ $("#fc-progress").style.width="100%";
+ $("#fc-done-sub").textContent=`${known.size} of ${CARDS.length} cards marked known. Keep the streak going.`;
+}
+$("#fc-card").onclick=flip;
+$("#fc-got").onclick=()=>mark(true);
+$("#fc-miss").onclick=()=>mark(false);
+$("#fc-shuffle").onclick=()=>startRound(true);
+$("#fc-again").onclick=()=>startRound(true);
+$("#fc-reset").onclick=()=>{known=new Set();saveKnown();startRound(true);};
+
+/* ---------- misc ---------- */
+$("#cheatsearch").addEventListener("input",e=>renderCheats(e.target.value));
+renderCheats();
+
+const T="osed_wr_theme";
+function applyTheme(t){document.documentElement.setAttribute("data-theme",t);
+ $("#themetxt").textContent=t==="dark"?"Dark":"Light";}
+try{const s=localStorage.getItem(T); if(s) applyTheme(s);}catch(e){}
+$("#theme").onclick=()=>{
+ const cur=document.documentElement.getAttribute("data-theme");
+ const sysDark=matchMedia("(prefers-color-scheme:dark)").matches;
+ const next=(cur?cur==="dark":sysDark)?"light":"dark";
+ applyTheme(next); try{localStorage.setItem(T,next);}catch(e){}
+};
+
+// tiny live clock in the header sub-label, terminal flavor
+setInterval(()=>{const d=new Date();
+ $("#clock").innerHTML="windbg&nbsp;›&nbsp;"+d.toTimeString().slice(0,8);},1000);
+
+startRound(false);
+const h=(location.hash||"").replace("#","");
+show(SECS.includes(h)?h:"loop");
+</script>
+</body>
+</html>
