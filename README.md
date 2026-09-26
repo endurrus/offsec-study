@@ -18,6 +18,10 @@ just what you actually type at the keyboard on exam day.
 | **30 min** | Take a template from `02-templates/`, and rebuild it from memory in a blank file. |
 | **60 min+** | Spin a vuln app in your lab, drive a full playbook end-to-end using only the cheatsheets. |
 
+> **On your phone / away from the lab?** The same dashboard is published as a private
+> Artifact you can open anywhere: **https://claude.ai/artifact/KN9bmAzFDwn4WN169wPfzS**
+> (only you can open it). Or just open `dashboard.html` from this repo — it's fully offline.
+
 The single most important habit: **never look at a full solution first.** Try the
 step, get stuck, *then* peek. That struggle is what makes it stick.
 
@@ -26,13 +30,18 @@ step, get stuck, *then* peek. That struggle is what makes it stick.
 ## The map
 
 ```
-00-methodology/   ← START HERE. Decision tree + one playbook per bug class.
-01-cheatsheets/   ← The commands. WinDbg, mona, nasm, msfvenom, badchars, asm.
+00-methodology/   ← START HERE. Decision tree, 6 playbooks, troubleshooting guide.
+01-cheatsheets/   ← The commands. WinDbg, mona, nasm, msfvenom, badchars, asm, IDA/RE.
 02-templates/     ← Copy-paste Python exploit skeletons. Fill in the blanks.
 03-shellcode/     ← Hand-rolled shellcode + how to assemble/extract it.
 04-drills/        ← Flashcards, spaced-rep schedule, exam-day checklist.
+05-labs/          ← Lab setup, ordered practice progression, full worked example.
 dashboard.html    ← Everything above, browsable on a phone. Open it directly.
 ```
+
+**Never done a full exploit start to finish?** Go straight to
+`05-labs/vulnserver-trun-walkthrough.md` and build it in your lab. Seeing one complete
+exploit, once, is worth ten pages of theory. Then follow `05-labs/practice-progression.md`.
 
 ## The 7 things OSED tests (and where to train each)
 
