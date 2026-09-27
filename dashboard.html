@@ -197,6 +197,24 @@ pre .s{color:var(--accent-2)}
   background:var(--accent-soft); border:1px solid color-mix(in srgb,var(--accent) 30%,transparent)}
 .pb .gotcha b{color:var(--accent)}
 
+/* quiz */
+.qz-opts{display:flex; flex-direction:column; gap:9px}
+.qz-opts button{font:inherit; font-size:.92rem; text-align:left; cursor:pointer;
+  padding:13px 15px; border-radius:11px; border:1px solid var(--border);
+  background:var(--surface); color:var(--text); display:flex; gap:10px; align-items:flex-start;
+  transition:border-color .15s, background .15s}
+.qz-opts button:hover:not(:disabled){border-color:var(--accent)}
+.qz-opts button:disabled{cursor:default}
+.qz-opts button .mk{font-family:var(--mono); font-weight:600; color:var(--muted-fg); flex:none}
+.qz-opts button.correct{border-color:var(--good);
+  background:color-mix(in srgb,var(--good) 12%,var(--surface))}
+.qz-opts button.correct .mk{color:var(--good)}
+.qz-opts button.wrong{border-color:var(--crit);
+  background:color-mix(in srgb,var(--crit) 12%,var(--surface))}
+.qz-opts button.wrong .mk{color:var(--crit)}
+.qz-explain{margin-top:12px; padding:12px 14px; border-radius:10px; font-size:.88rem;
+  background:var(--accent-2-soft); border:1px solid color-mix(in srgb,var(--accent-2) 30%,transparent)}
+.qz-explain b{color:var(--accent-2)}
 footer{margin-top:34px; text-align:center; color:var(--muted-fg); font-size:.78rem;
   font-family:var(--mono)}
 .hidden{display:none !important}
@@ -220,6 +238,7 @@ footer{margin-top:34px; text-align:center; color:var(--muted-fg); font-size:.78r
     <button role="tab" aria-selected="false" data-tab="cards">Flashcards</button>
     <button role="tab" aria-selected="false" data-tab="playbooks">Playbooks</button>
     <button role="tab" aria-selected="false" data-tab="lab">Lab</button>
+    <button role="tab" aria-selected="false" data-tab="quiz">Quiz</button>
   </nav>
 </header>
 
@@ -317,6 +336,35 @@ footer{margin-top:34px; text-align:center; color:var(--muted-fg); font-size:.78r
     <div id="labsteps"></div>
     <p class="eyebrow" style="margin-top:22px">stuck &gt;30 min? symptom → fix</p>
     <div id="fixbox"></div>
+  </section>
+
+  <!-- QUIZ -->
+  <section id="quiz" class="hidden">
+    <p class="eyebrow">train the decision, not just the facts</p>
+    <h2 class="sec">Scenario Quiz</h2>
+    <p class="lede">You're at the crash. Read the situation, pick the move. This is the
+      reflex the exam actually grades.</p>
+    <div class="fc-bar">
+      <span class="stat">Q <b id="qz-pos">0</b>/<b id="qz-total">0</b></span>
+      <span class="stat">Score <b id="qz-score">0</b></span>
+      <span class="spacer"></span>
+      <button class="pill" id="qz-restart">↻ New round</button>
+    </div>
+    <div class="progress"><i id="qz-progress"></i></div>
+    <div id="qz-stage">
+      <div class="panel" style="margin-bottom:12px">
+        <p class="eyebrow" id="qz-tag" style="color:var(--accent-2)">scenario</p>
+        <div id="qz-q" style="font-size:1.02rem; line-height:1.5"></div>
+      </div>
+      <div id="qz-opts" class="qz-opts"></div>
+      <div id="qz-explain" class="qz-explain hidden"></div>
+      <button class="pill" id="qz-next" style="margin-top:12px; display:none">Next →</button>
+    </div>
+    <div class="done-msg hidden" id="qz-done">
+      <div class="big" id="qz-final">—</div>
+      <p id="qz-final-sub"></p>
+      <button class="pill" id="qz-again" style="margin-top:10px">Go again</button>
+    </div>
   </section>
 
   <footer>keep it offline · keep it in your lab VM · make it yours</footer>
@@ -479,6 +527,65 @@ const FIXES=[
  ["Works attached, fails standalone","Missed badchar, or addr shifts without attach. Re-verify badchars."]
 ];
 
+const QUIZ=[
+ {tag:"classify",q:"After the crash, <code>r</code> shows <b>eip=41414141</b> and <code>!exchain</code> looks normal. What is it?",
+  opts:["Classic stack buffer overflow — you control the saved return address",
+        "SEH overflow — overwrite nSEH and the handler",
+        "Format string — the app printf'd your input",
+        "DEP is blocking execution"],
+  correct:0,why:"Your bytes landing directly in EIP = you own the saved return address. Get the offset, drop a JMP ESP, land shellcode after it."},
+ {tag:"classify",q:"EIP holds a normal-looking app address, but <code>!exchain</code> shows the handler = <b>42424242</b> (your B's). What is it?",
+  opts:["Stack BOF — just find the offset to EIP",
+        "SEH overflow — you control the exception handler chain",
+        "Egghunter needed",
+        "ASLR is defeating you"],
+  correct:1,why:"EIP intact + handler is your bytes = SEH overflow. Put a POP POP RET in SEH and a short jump in nSEH."},
+ {tag:"command",q:"You just crashed with a cyclic pattern. Which single command maps it to EIP/SEH, shows which registers point into your buffer, and how much space you have?",
+  opts:["!py mona mod","!py mona jmp -r esp","!py mona findmsp","!analyze -v"],
+  correct:2,why:"findmsp is the all-in-one triage: offsets to EIP/SEH, register pointers, and space at ESP — one shot."},
+ {tag:"gadget",q:"It's an SEH overflow. Which gadget do you put in the SEH field?",
+  opts:["JMP ESP","POP POP RET","CALL ESP","A NOP sled"],
+  correct:1,why:"POP POP RET unwinds two stack slots and RETs into nSEH — which you control. JMP ESP is for straight EIP overwrites."},
+ {tag:"gadget",q:"You control EIP in a stack BOF and ESP points right at your shellcode. Best jump?",
+  opts:["POP POP RET","JMP ESP (FF E4)","A near jump backward","VirtualProtect"],
+  correct:1,why:"ESP points at your bytes → JMP ESP transfers execution straight into the shellcode."},
+ {tag:"nSEH",q:"In an SEH exploit, what typically goes in the 4-byte nSEH field?",
+  opts:["The POP POP RET address","A short jump forward (EB 06) over the SEH pointer","The full shellcode","0x00000000"],
+  correct:1,why:"POP POP RET returns to nSEH, so nSEH does a short jump (\\xeb\\x06) over the 4-byte SEH field into your shellcode."},
+ {tag:"mitigation",q:"You land in your shellcode, the first bytes run, then an access violation. <code>mona mod</code> shows NXCompat=True. What now?",
+  opts:["Find a different JMP ESP","Build a ROP chain to VirtualProtect (mark memory RWX)","Add more NOPs","Change badchars"],
+  correct:1,why:"DEP/NX is on — data pages aren't executable. ROP to VirtualProtect flips the region to RWX, then return into shellcode."},
+ {tag:"mitigation",q:"Your exploit works, then fails after a reboot; the jump address now points elsewhere. Cause and first move?",
+  opts:["Badchar — redo the bytearray","ASLR — hunt a non-ASLR module (mona mod / -cm aslr=false)","DEP — build ROP","Wrong offset — re-run findmsp"],
+  correct:1,why:"Drifting addresses = ASLR rebased your module. First try a module with ASLR=False; else leak a pointer and compute base = leaked − RVA."},
+ {tag:"badchars",q:"Your exploit runs the first few shellcode instructions then dies, and memory where shellcode should be looks like garbage past a certain byte. Most likely?",
+  opts:["DEP is on","A bad character truncated/mangled the payload","Wrong JMP ESP","ASLR"],
+  correct:1,why:"Truncation/mangling at a specific byte = a badchar. Re-run the bytearray/compare ritual; trust the FIRST bad byte reported."},
+ {tag:"badchars",q:"You must exclude your badchar set from which of these?",
+  opts:["Only msfvenom","Only the mona jmp search","msfvenom -b AND every mona search (-cpb) AND the jump address itself","Nowhere if DEP is off"],
+  correct:2,why:"Same set everywhere: msfvenom -b, mona jmp/seh/rop -cpb. A gadget/jump address containing a badchar is silently useless."},
+ {tag:"egghunter",q:"You control EIP but only ~40 bytes of space after it; your real payload is 350 bytes and lives in another buffer. Move?",
+  opts:["Compress the shellcode","Egghunter: tiny hunter at EIP scans memory for the egg + real shellcode","Use a bigger JMP","Give up on that input"],
+  correct:1,why:"Egghunter (~32 bytes) fits the small space and hunts the w00tw00t-tagged shellcode wherever it landed."},
+ {tag:"egghunter",q:"With tag 'w00t', what does the egghunter actually search memory for?",
+  opts:["w00t (once)","w00tw00t (the tag doubled)","\\x00w00t","The shellcode's first bytes"],
+  correct:1,why:"The tag is doubled to w00tw00t so the hunter won't accidentally match the single copy inside its own code."},
+ {tag:"format",q:"The app does <code>printf(user_input)</code>. You send %x %x %x and get stack hex back. To beat ASLR you'd primarily use…",
+  opts:["%n to write","%N$x / %N$p to leak a pointer, then compute a base","%s to crash it","An egghunter"],
+  correct:1,why:"Read primitives (%x/%p) leak a pointer; base = leaked − RVA rebuilds addresses. %n is the WRITE primitive."},
+ {tag:"process",q:"Your exploit doesn't pop a shell and you're not sure if the offset or the shellcode is at fault. Fastest way to split the problem?",
+  opts:["Regenerate shellcode 5 times","Replace shellcode with \\xcc\\xcc\\xcc\\xcc (int3) and see if WinDbg breaks at ESP",
+        "Try a different port","Rewrite the whole script"],
+  correct:1,why:"If int3 breaks exactly where ESP pointed, offset+jump are proven and the bug is 100% in the payload. This one test saves hours."},
+ {tag:"seh",q:"On an SEH crash in WinDbg, why must you press <code>g</code> (pass the exception) before inspecting the chain?",
+  opts:["To restart the process","Control only transfers to your overwritten handler when the exception is actually dispatched",
+        "To disable DEP","To reset ASLR"],
+  correct:1,why:"At the first-chance AV the handler hasn't run yet. Pass it so Windows dispatches to your overwritten SEH — that's when you gain control."},
+ {tag:"module",q:"For gadgets and jumps, which module type is usually the safest bet?",
+  opts:["Core OS DLLs (kernel32, ntdll)","The app's own / 3rd-party DLL (OS Dll=False) — often no ASLR/SafeSEH","Anything with the highest base address","The one with SafeSEH=True"],
+  correct:1,why:"App/3rd-party DLLs frequently ship without ASLR/SafeSEH. Hunt the mona mod row with the most False values."}
+];
+
 /* ---------- render ---------- */
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 
@@ -515,11 +622,12 @@ $("#pbbox").innerHTML=PLAYBOOKS.map(p=>
   <div class="gotcha"><b>Gotcha —</b> ${p.gotcha}</div></div></details>`).join("");
 
 /* ---------- tabs ---------- */
-const SECS=["loop","triage","cheats","cards","playbooks","lab"];
+const SECS=["loop","triage","cheats","cards","playbooks","lab","quiz"];
 function show(tab){
  SECS.forEach(s=>$("#"+s).classList.toggle("hidden",s!==tab));
  $$("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===tab));
  if(tab==="cards") drawCard();
+ if(tab==="quiz" && !qzStarted){qzStart(); qzStarted=true;}
  try{location.hash=tab;}catch(e){}
  window.scrollTo({top:0});
 }
@@ -620,6 +728,64 @@ $("#fc-miss").onclick=()=>mark(false);
 $("#fc-shuffle").onclick=()=>startRound(true);
 $("#fc-again").onclick=()=>startRound(true);
 $("#fc-reset").onclick=()=>{known=new Set();saveKnown();startRound(true);};
+
+/* ---------- quiz ---------- */
+let qzStarted=false, qzOrder=[], qzIdx=0, qzScore=0, qzAnswered=false;
+function qzStart(){
+ qzOrder=QUIZ.map((q,i)=>i);
+ for(let i=qzOrder.length-1;i>0;i--){const j=(Math.random()*(i+1))|0;[qzOrder[i],qzOrder[j]]=[qzOrder[j],qzOrder[i]];}
+ qzIdx=0; qzScore=0;
+ $("#qz-done").classList.add("hidden"); $("#qz-stage").classList.remove("hidden");
+ qzDraw();
+}
+function qzDraw(){
+ $("#qz-total").textContent=qzOrder.length;
+ $("#qz-score").textContent=qzScore;
+ if(qzIdx>=qzOrder.length){qzFinish();return;}
+ qzAnswered=false;
+ const q=QUIZ[qzOrder[qzIdx]];
+ $("#qz-pos").textContent=qzIdx+1;
+ $("#qz-tag").textContent=q.tag;
+ $("#qz-q").innerHTML=q.q;
+ $("#qz-progress").style.width=(qzIdx/qzOrder.length*100)+"%";
+ const marks=["A","B","C","D","E"];
+ const box=$("#qz-opts"); box.innerHTML="";
+ q.opts.forEach((opt,i)=>{
+   const b=document.createElement("button");
+   b.innerHTML=`<span class="mk">${marks[i]}</span><span>${opt}</span>`;
+   b.onclick=()=>qzPick(i,b);
+   box.appendChild(b);
+ });
+ const ex=$("#qz-explain"); ex.classList.add("hidden"); ex.innerHTML="";
+ $("#qz-next").style.display="none";
+}
+function qzPick(i,btn){
+ if(qzAnswered) return;
+ qzAnswered=true;
+ const q=QUIZ[qzOrder[qzIdx]];
+ const btns=[...$("#qz-opts").children];
+ btns.forEach(b=>b.disabled=true);
+ btns[q.correct].classList.add("correct");
+ if(i===q.correct){qzScore++; $("#qz-score").textContent=qzScore;}
+ else{btn.classList.add("wrong");}
+ const ex=$("#qz-explain");
+ ex.innerHTML=(i===q.correct?"<b>Correct.</b> ":"<b>Not quite.</b> ")+q.why;
+ ex.classList.remove("hidden");
+ $("#qz-next").style.display="inline-block";
+}
+function qzFinish(){
+ $("#qz-stage").classList.add("hidden");
+ $("#qz-done").classList.remove("hidden");
+ $("#qz-progress").style.width="100%";
+ const pct=Math.round(qzScore/qzOrder.length*100);
+ $("#qz-final").textContent=`${qzScore}/${qzOrder.length} · ${pct}%`;
+ $("#qz-final-sub").textContent = pct>=85?"Exam-ready reflexes. Keep them warm."
+   : pct>=60?"Solid. Re-drill the ones you missed and the playbooks behind them."
+   : "Go read the Triage tab and the playbooks, then run it again.";
+}
+$("#qz-next").onclick=()=>{qzIdx++; qzDraw();};
+$("#qz-restart").onclick=qzStart;
+$("#qz-again").onclick=qzStart;
 
 /* ---------- misc ---------- */
 $("#cheatsearch").addEventListener("input",e=>renderCheats(e.target.value));

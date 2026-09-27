@@ -13,7 +13,7 @@ just what you actually type at the keyboard on exam day.
 
 | You have… | Do this |
 |-----------|---------|
-| **5 min** | Open `dashboard.html` on your phone. Flip 5 flashcards from `04-drills/flashcards.csv`. |
+| **5 min** | Open `dashboard.html` → flip 5 flashcards or run 5 quiz scenarios. Or skim `QUICK-REFERENCE.md`. |
 | **15 min** | Read ONE playbook in `00-methodology/`. Trace the steps out loud. |
 | **30 min** | Take a template from `02-templates/`, and rebuild it from memory in a blank file. |
 | **60 min+** | Spin a vuln app in your lab, drive a full playbook end-to-end using only the cheatsheets. |
@@ -30,13 +30,14 @@ step, get stuck, *then* peek. That struggle is what makes it stick.
 ## The map
 
 ```
+QUICK-REFERENCE.md ← One page. The essentials. Pin it to your wall.
 00-methodology/   ← START HERE. Decision tree, 6 playbooks, troubleshooting guide.
 01-cheatsheets/   ← The commands. WinDbg, mona, nasm, msfvenom, badchars, asm, IDA/RE.
 02-templates/     ← Copy-paste Python exploit skeletons. Fill in the blanks.
 03-shellcode/     ← Hand-rolled shellcode + how to assemble/extract it.
 04-drills/        ← Flashcards, spaced-rep schedule, exam-day checklist.
-05-labs/          ← Lab setup, ordered practice progression, full worked example.
-dashboard.html    ← Everything above, browsable on a phone. Open it directly.
+05-labs/          ← Lab setup, practice progression, TWO full worked examples (TRUN + GMON).
+dashboard.html    ← Everything above + a scenario quiz, browsable on a phone.
 ```
 
 **Never done a full exploit start to finish?** Go straight to
