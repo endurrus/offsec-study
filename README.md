@@ -34,10 +34,10 @@ QUICK-REFERENCE.md ← One page. The essentials. Pin it to your wall.
 00-methodology/   ← START HERE. Decision tree, 6 playbooks, troubleshooting guide.
 01-cheatsheets/   ← The commands. WinDbg, mona, nasm, msfvenom, badchars, asm, IDA/RE.
 02-templates/     ← Copy-paste Python exploit skeletons. Fill in the blanks.
-03-shellcode/     ← Hand-rolled shellcode + how to assemble/extract it.
-04-drills/        ← Flashcards, spaced-rep schedule, exam-day checklist.
-05-labs/          ← Lab setup, practice progression, TWO full worked examples (TRUN + GMON).
-dashboard.html    ← Everything above + a scenario quiz, browsable on a phone.
+03-shellcode/     ← Hand-rolled shellcode: reverse shell + WinExec("calc") from scratch.
+04-drills/        ← Flashcards (79), spaced-rep schedule, exam-day checklist, timed mock exams.
+05-labs/          ← Lab setup, practice progression, 3 worked examples (TRUN, GMON, DEP/ROP).
+dashboard.html    ← Everything above + flashcards & a scenario quiz, browsable on a phone.
 ```
 
 **Never done a full exploit start to finish?** Go straight to

@@ -583,7 +583,30 @@ const QUIZ=[
   correct:1,why:"At the first-chance AV the handler hasn't run yet. Pass it so Windows dispatches to your overwritten SEH — that's when you gain control."},
  {tag:"module",q:"For gadgets and jumps, which module type is usually the safest bet?",
   opts:["Core OS DLLs (kernel32, ntdll)","The app's own / 3rd-party DLL (OS Dll=False) — often no ASLR/SafeSEH","Anything with the highest base address","The one with SafeSEH=True"],
-  correct:1,why:"App/3rd-party DLLs frequently ship without ASLR/SafeSEH. Hunt the mona mod row with the most False values."}
+  correct:1,why:"App/3rd-party DLLs frequently ship without ASLR/SafeSEH. Hunt the mona mod row with the most False values."},
+ {tag:"format",q:"You send <code>AAAA %x %x %x %x %x</code> and the 5th %x prints <b>41414141</b>. What have you found?",
+  opts:["A badchar","Your buffer sits at positional arg 5 — use %5$x / %5$n to target it directly","The return address","Nothing useful"],
+  correct:1,why:"The %x that prints your marker reveals your offset. Now %5$x reads it, %5$n writes through it."},
+ {tag:"format",q:"To overwrite a 4-byte return address via a format string, you primarily use…",
+  opts:["%s four times","Four %hhn writes (one per byte), addresses at arg..arg+3, counts in ascending order",
+        "A single %n with a huge width","%x in a loop"],
+  correct:1,why:"Write a byte at a time with %hhn; pad the running count with %<width>c to each target byte, smallest first."},
+ {tag:"aslr",q:"Every module is ASLR'd, but one bug lets you print a stack pointer. How do you use it?",
+  opts:["Ignore it — ASLR can't be beaten","Leak the pointer, identify its symbol, compute base = leaked − RVA, rebuild all addrs",
+        "Brute-force the base","Switch to an egghunter"],
+  correct:1,why:"An info leak gives you a live base this run. RVAs are constant, so base + RVA rebuilds every gadget/jump."},
+ {tag:"aslr",q:"You pick a JMP ESP from a module where <code>mona mod</code> shows ASLR=True. What happens?",
+  opts:["Nothing, addresses are fixed","It works until the module rebases (reboot/reload), then the address is wrong",
+        "DEP blocks it","SafeSEH blocks it"],
+  correct:1,why:"ASLR'd modules move. Hardcoding their addresses makes a fragile exploit — use a non-ASLR module or leak the base."},
+ {tag:"rop",q:"Mid-ROP, you single-step and after a <code>POP EBX # RET</code> gadget EBX holds the wrong value. Most likely cause?",
+  opts:["DEP is off","The gadget address or the value next to it contains a badchar / wrong slot alignment",
+        "ASLR","The shellcode is bad"],
+  correct:1,why:"A POP consumes the next stack dword; if the gadget address has a badchar or a slot is misaligned, the register loads garbage. Regen with -cpb and re-check alignment."},
+ {tag:"shellcode",q:"In custom shellcode, why resolve APIs via the PEB walk instead of hardcoding kernel32's base?",
+  opts:["It's faster to type","Hardcoded bases break across machines/reboots; the PEB walk is position-independent",
+        "To avoid DEP","To defeat SafeSEH"],
+  correct:1,why:"kernel32's base varies by version/ASLR. Walking the PEB finds it at runtime, so the shellcode works anywhere."}
 ];
 
 /* ---------- render ---------- */
@@ -673,7 +696,22 @@ const CARDS=[
  ["stdcall arg order & cleanup","Args right→left; callee cleans (retn N); return in EAX","asm"],
  ["Best module type for gadgets/jumps","App's own / 3rd-party DLL (OS Dll=False) — usually no mitigations","concept"],
  ["Exploit works attached but not standalone — first suspect?","A missed badchar truncated the payload, or addr differs when not attached","badchar"],
- ["The one rule that saves exam runs","Prove code exec with int3/calc BEFORE fighting a full reverse shell","exam"]
+ ["The one rule that saves exam runs","Prove code exec with int3/calc BEFORE fighting a full reverse shell","exam"],
+ ["Format string: read the value AT an address you supply","Put the addr in your buffer, then %N$s (N = your offset) — derefs it as char*","fmt"],
+ ["Format string: order of the four %hhn writes","Ascending by byte value — the printed count only grows, so smallest byte first","fmt"],
+ ["Format string: control the count %n writes","Field-width padding: %100c prints 100 chars → %n writes 100","fmt"],
+ ["Format string: typical write targets","Saved return address, a GOT/IAT function pointer, or the SEH handler","fmt"],
+ ["Format string: the source-code tell","printf(user) instead of printf(\"%s\", user) — user controls the format","fmt"],
+ ["ASLR: what randomizes vs stays constant","The module BASE randomizes; the RVA (offset within the module) is constant","aslr"],
+ ["ASLR: rebuild an address after a leak","abs = base + RVA, where base = leaked − RVA_of_leaked_symbol","aslr"],
+ ["ASLR: fastest bypass to try first","Find a module with ASLR=False (mona mod) and use its fixed addresses","aslr"],
+ ["ASLR: why leak in the same process run?","The base re-randomizes each launch; a stale leak points to the old base","aslr"],
+ ["ASLR: low-bits partial-overwrite trick","Low 12 bits (page offset) don't randomize — a partial overwrite keeps rebased high bytes","aslr"],
+ ["ROP: what does PUSHAD do in the chain?","Pushes all GP regs as a call frame; mona pre-loads them so the stack IS the VirtualProtect args","rop"],
+ ["ROP: common VirtualProtect dwSize","0x201 — plenty to cover the shellcode region","rop"],
+ ["ROP: debug a chain that dies","bp first gadget, single-step (t), watch each POP load its value; find the broken gadget","rop"],
+ ["Shellcode: find kernel32 with no imports","PEB walk: fs:[0x30]→Ldr(+0x0C)→InMemoryOrderModuleList(+0x14)→DllBase(+0x10)","shellcode"],
+ ["Shellcode: why ror13-hash API names?","Saves space, carries no plaintext/badchars; compare name hashes to a baked constant","shellcode"]
 ];
 
 const LS="osed_wr_known_v1";
